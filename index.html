@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Informasi Rukun Tetangga (SIRT)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Mengamankan tampilan Blogger agar fullscreen */
+        body, html { margin: 0; padding: 0; font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .app-fullscreen-wrapper {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
+            z-index: 999999; background: #f3f4f6; overflow: hidden; display: flex; flex-direction: column;
+        }
+        .scrollable-content { overflow-y: auto; height: 100%; }
+        
+        /* Animasi */
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        
+        /* Hide element class */
+        .hidden-view { display: none !important; }
+        
+        /* Toast & Modal */
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999999; display: flex; flex-direction: column; gap: 10px; }
+        .toast { padding: 12px 20px; border-radius: 8px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); min-width: 250px; transform: translateX(120%); transition: transform 0.3s ease; }
+        .toast.show { transform: translateX(0); }
+        .toast-success { background: #10b981; }
+        .toast-error { background: #ef4444; }
+        .toast-info { background: #3b82f6; }
+        
+        #printArea { display: none; }
+        @media print {
+            /* Sembunyikan seluruh UI aplikasi saat mencetak */
+            #appRoot, #toast-container, #panicBtn, #panicTooltip { display: none !important; }
+            /* Tampilkan area cetak */
+            #printArea { 
+                display: block !important; 
+                position: absolute; left: 0; top: 0; width: 100%; 
+                margin: 0; padding: 2cm; background: white; 
+                z-index: 999999; 
+            }
+            body, html { background: white; margin: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Thumbnail Postingan Blogger Tersembunyi -->
+<div style="display:none;">
+    <img src="https://placehold.co/1200x630/1e3a8a/ffffff?text=Portal+RT+Digital" alt="Thumbnail Portal RT">
+</div>
+
+<!-- CONTAINER UTAMA APLIKASI -->
+<div id="appRoot" class="app-fullscreen-wrapper">
+    
+    <!-- SCREEN: LOGIN & REGISTER -->
+    <div id="loginScreen" class="flex items-center justify-center h-full w-full bg-slate-900 bg-opacity-95 absolute inset-0 z-50 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-2xl w-11/12 max-w-md p-8 fade-in relative overflow-hidden">
+            
+            <!-- PANEL LOGIN -->
+            <div id="panelLogin" class="fade-in">
+                <div class="text-center mb-8">
+                    <div class="bg-blue-600 h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                        <i class="fa-solid fa-users-between-lines text-2xl text-white"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold text-gray-800">Portal Smart RT0 02/10 Ciomas Hills</h1>
+                    <p class="text-gray-500 text-sm mt-1">Sistem Administrasi & Layanan Warga</p>
+                </div>
+                
+                <div class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Username (NIK / ID)</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fa-solid fa-user text-gray-400"></i>
+                            </div>
+                            <input type="text" id="loginUsername" class="pl-10 w-full rounded-xl border border-gray-300 py-3 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="Contoh: admin atau peserta">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fa-solid fa-lock text-gray-400"></i>
+                            </div>
+                            <input type="password" id="loginPassword" class="pl-10 w-full rounded-xl border border-gray-300 py-3 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="Password: edudigital">
+                        </div>
+                    </div>
+                    <button onclick="handleLogin()" id="btnLogin" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all flex justify-center items-center gap-2">
+                        <span>Masuk</span> <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                    </button>
+                    
+                    <p class="text-center text-sm text-gray-600 mt-4">
+                        Belum punya akun? <a href="#" onclick="showRegister()" class="text-blue-600 font-bold hover:underline">Daftar sekarang</a>
+                        <p
+                        <p class="text-center text-xs text-gray-400 mt-4">
+                        &copy; 2026 SmartRT.By.Entis.
+                    </p>
+                    <div id="loginInfo" class="text-xs text-center text-gray-400 mt-4 bg-gray-50 p-2 rounded-lg">
+                        
+                    </div>
+                </div>
+            </div>
+
+            <!-- PANEL DAFTAR (Awalnya Sembunyi) -->
+            <div id="panelRegister" class="hidden-view fade-in">
+                <div class="text-center mb-6">
+                    <div class="bg-green-500 h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                        <i class="fa-solid fa-user-plus text-2xl text-white"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold text-gray-800">Daftar Akun Warga</h1>
+                    <p class="text-gray-500 text-sm mt-1">Lengkapi data untuk mendapat akses</p>
+                    
+                </div>
+                
+                <div class="space-y-4">
+                    <div>
+                      
+                        <input type="text" id="regNama" class="w-full rounded-xl border border-gray-300 py-2.5 px-4 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all" placeholder="Nama Lengkap">
+                    </div>
+                    <div>
+                        
+                        <input type="text" id="regNIK" class="w-full rounded-xl border border-gray-300 py-2.5 px-4 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all" placeholder="Username (Untuk Login)">
+                    </div>
+                    <div>
+                        
+                        <input type="password" id="regPassword" class="w-full rounded-xl border border-gray-300 py-2.5 px-4 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all" placeholder="Buat password baru">
+                    </div>
+                    
+                    <button onclick="handleRegister()" id="btnRegister" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all flex justify-center items-center gap-2 mt-2">
+                        <span>Daftar Sekarang</span> <i class="fa-solid fa-check"></i>
+                    </button>
+                    
+                    <p class="text-center text-sm text-gray-600 mt-4">
+                        Sudah punya akun? <a href="#" onclick="showLogin()" class="text-gray-500 font-bold hover:text-blue-600 hover:underline"><i class="fa-solid fa-arrow-left mr-1"></i> Kembali ke Login</a>
+                    </p>
+                    <p class="text-center text-xs text-gray-400 mt-4">
+                        &copy; 2026 SmartRT.By.Entis.
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- SCREEN: MAIN APP (Hidden initially) -->
+    <div id="mainApp" class="hidden-view h-full w-full flex bg-gray-100">
+        
+        <!-- SIDEBAR -->
+        <aside id="sidebar" class="bg-slate-800 text-white w-64 flex-shrink-0 hidden md:flex flex-col shadow-2xl transition-all duration-300 relative z-40">
+            <div class="p-5 border-b border-slate-700 flex items-center gap-3">
+                <i class="fa-solid fa-building-user text-2xl text-blue-400"></i>
+                <div>
+                    <h2 class="font-bold text-lg">Smart RT</h2>
+                    <p class="text-xs text-slate-400">Panel Interaktif</p>
+                </div>
+            </div>
+            
+            <div class="p-4 flex items-center gap-3 border-b border-slate-700 bg-slate-850">
+                <div class="h-10 w-10 rounded-full bg-slate-600 flex items-center justify-center font-bold text-xl uppercase" id="sidebarAvatar">A</div>
+                <div>
+                    <p class="text-sm font-semibold truncate w-36" id="sidebarUserName">Nama User</p>
+                    <p class="text-xs text-blue-400 uppercase tracking-wider" id="sidebarUserRole">Role</p>
+                </div>
+            </div>
+
+            <nav class="flex-1 overflow-y-auto py-4" id="sidebarMenu">
+                <!-- Menu akan di-render via JS berdasarkan Role -->
+            </nav>
+            
+            <div class="p-4 border-t border-slate-700">
+                <button onclick="handleLogout()" class="w-full flex items-center gap-3 px-4 py-2 text-slate-300 hover:text-white hover:bg-red-500 rounded-lg transition-colors">
+                    <i class="fa-solid fa-power-off"></i> Keluar
+                </button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <div class="flex-1 flex flex-col h-full overflow-hidden relative">
+            
+            <!-- TOPBAR (Mobile Toggle & Info) -->
+            <header class="bg-white shadow-sm border-b border-gray-200 h-16 flex items-center justify-between px-4 z-30">
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleSidebar()" class="md:hidden text-gray-500 hover:text-blue-600 focus:outline-none p-2 rounded-lg bg-gray-100">
+                        <i class="fa-solid fa-bars text-lg"></i>
+                    </button>
+                    <h2 class="font-semibold text-gray-800 text-lg md:text-xl truncate" id="topbarTitle">Dashboard</h2>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span id="topbarDate" class="text-sm text-gray-500 hidden sm:block"></span>
+                </div>
+            </header>
+
+            <!-- SCROLLABLE CONTENT VIEW -->
+            <main class="flex-1 overflow-y-auto p-4 md:p-6 pb-24 scrollable-content bg-slate-50" id="contentArea">
+                
+                <!-- VIEW: DASHBOARD (ADMIN & WARGA) -->
+                <div id="view-dashboard" class="view-section fade-in hidden-view">
+                    <!-- Widget Ringkasan akan diinjeksi via JS -->
+                    <div id="dashboardWidgets" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"></div>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Feed Pengumuman -->
+                        <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="font-bold text-gray-800 flex items-center gap-2"><i class="fa-solid fa-bullhorn text-blue-500"></i> Papan Informasi Warga</h3>
+                            </div>
+                            <div id="feedPengumuman" class="space-y-4">
+                                <!-- Konten dari JS -->
+                            </div>
+                        </div>
+                        
+                        <!-- Panel Info Kas / Iuran Singkat -->
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 h-fit">
+                            <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2"><i class="fa-solid fa-wallet text-green-500"></i> Transparansi Kas</h3>
+                            <div class="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border border-green-200 text-center mb-4">
+                                <p class="text-sm text-green-700 font-medium">Saldo Kas RT Saat Ini</p>
+                                <p class="text-3xl font-bold text-green-700 mt-1" id="dashSaldoKas">Rp 0</p>
+                            </div>
+                            <div id="dashIuranPanel" class="hidden-view">
+                                <h4 class="text-sm font-bold text-gray-600 mb-2 border-t pt-4">Status Iuran Saya Bulan Ini</h4>
+                                <div id="dashStatusIuran" class="p-3 rounded-lg text-center font-semibold text-sm"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: DATA WARGA (ADMIN) -->
+                <div id="view-warga" class="view-section fade-in hidden-view">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="p-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+                            <h3 class="font-bold text-gray-800 text-lg">Daftar Warga & Kepala Keluarga</h3>
+                            <button onclick="openFormWarga()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-md">
+                                <i class="fa-solid fa-plus mr-1"></i> Tambah Warga
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm whitespace-nowrap">
+                                <thead class="bg-slate-50 text-slate-600 font-medium border-b border-slate-200">
+                                    <tr>
+                                        <th class="px-5 py-3">No. KK</th>
+                                        <th class="px-5 py-3">NIK</th>
+                                        <th class="px-5 py-3">Nama Lengkap</th>
+                                        <th class="px-5 py-3">L/P</th>
+                                        <th class="px-5 py-3">Status/Pekerjaan</th>
+                                        <th class="px-5 py-3 text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tableWarga" class="divide-y divide-gray-100 text-gray-700">
+                                    <!-- JS Content -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: BERITA / CMS (ADMIN) -->
+                <div id="view-berita" class="view-section fade-in hidden-view">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
+                        <h3 class="font-bold text-gray-800 text-lg mb-4">Buat Pengumuman Baru</h3>
+                        <div class="space-y-4">
+                            <input type="text" id="formBeritaJudul" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Judul Pengumuman">
+                            <textarea id="formBeritaKonten" rows="4" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Isi pengumuman lengkap..."></textarea>
+                            <button onclick="simpanBerita()" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium shadow-md hover:bg-blue-700"><i class="fa-solid fa-paper-plane mr-2"></i> Publikasikan</button>
+                        </div>
+                    </div>
+                    
+                    <h3 class="font-bold text-gray-800 text-lg mb-4">Riwayat Pengumuman</h3>
+                    <div id="listRiwayatBerita" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- JS Content -->
+                    </div>
+                </div>
+
+                <!-- VIEW: KELUHAN -->
+                <div id="view-keluhan" class="view-section fade-in hidden-view">
+                    
+                    <!-- Form Lapor (Untuk Warga) -->
+                    <div id="panelLaporKeluhan" class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6 hidden-view">
+                        <h3 class="font-bold text-gray-800 text-lg mb-4"><i class="fa-solid fa-triangle-exclamation text-yellow-500 mr-2"></i> Buat Laporan / Keluhan</h3>
+                        <div class="space-y-4">
+                            <select id="formKeluhanKategori" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                                <option value="Infrastruktur">Jalan / Infrastruktur</option>
+                                <option value="Keamanan">Keamanan / Ketertiban</option>
+                                <option value="Kebersihan">Kebersihan / Sampah</option>
+                                <option value="Lainnya">Lainnya</option>
+                            </select>
+                            <textarea id="formKeluhanDeskripsi" rows="3" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Deskripsikan masalah yang terjadi di lingkungan..."></textarea>
+                            <div class="flex justify-end gap-3 mt-4">
+                                 <button onclick="tutupFormKeluhan()" class="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">Batal</button>
+                                 <button onclick="kirimKeluhan()" class="bg-yellow-500 text-white px-6 py-2 rounded-lg font-medium shadow-md hover:bg-yellow-600"><i class="fa-solid fa-paper-plane mr-2"></i> Kirim Laporan</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabel Daftar Keluhan -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="p-5 border-b border-gray-100 flex justify-between items-center">
+                            <h3 class="font-bold text-gray-800 text-lg" id="titleDaftarKeluhan">Daftar Laporan Warga</h3>
+                            <!-- Tombol Menu Tambah Keluhan -->
+                            <button id="btnTambahKeluhan" onclick="bukaFormKeluhan()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-md hidden-view">
+                                <i class="fa-solid fa-plus mr-1"></i> Buat Laporan
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm whitespace-nowrap">
+                                <thead class="bg-slate-50 text-slate-600 font-medium border-b border-slate-200">
+                                    <tr>
+                                        <th class="px-5 py-3">Tanggal</th>
+                                        <th class="px-5 py-3">Pelapor</th>
+                                        <th class="px-5 py-3">Kategori</th>
+                                        <th class="px-5 py-3">Deskripsi</th>
+                                        <th class="px-5 py-3">Status</th>
+                                        <th class="px-5 py-3 text-center" id="thAksiKeluhan">Aksi Admin</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tableKeluhan" class="divide-y divide-gray-100 text-gray-700">
+                                    <!-- JS Content -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: SURAT -->
+                <div id="view-surat" class="view-section fade-in hidden-view">
+                    <!-- Form Surat -->
+                    <div id="panelFormSurat" class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6 hidden-view">
+                        <h3 class="font-bold text-gray-800 text-lg mb-4"><i class="fa-solid fa-file-signature text-blue-500 mr-2"></i> Form Pengajuan Surat</h3>
+                        <div class="space-y-4">
+                            <select id="formSuratJenis" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                                <option value="Surat Pengantar KTP">Pengantar Pembuatan KTP</option>
+                                <option value="Surat Pengantar KK">Pengantar Pembuatan KK</option>
+                                <option value="Surat Keterangan Domisili">Keterangan Domisili</option>
+                                <option value="Surat Keterangan Tidak Mampu">Keterangan Tidak Mampu (SKTM)</option>
+                                <option value="Lainnya">Lainnya...</option>
+                            </select>
+                            <textarea id="formSuratKet" rows="3" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Tuliskan keperluan Anda secara detail..."></textarea>
+                            <div class="flex justify-end gap-3 mt-4">
+                                <button onclick="tutupFormSurat()" class="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">Batal</button>
+                                <button onclick="ajukanSurat()" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium shadow-md hover:bg-blue-700"><i class="fa-solid fa-paper-plane mr-2"></i> Ajukan Surat</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabel Surat -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="p-5 border-b border-gray-100 flex justify-between items-center">
+                            <h3 class="font-bold text-gray-800 text-lg">Daftar Permohonan Surat</h3>
+                            <button id="btnTambahSurat" onclick="bukaFormSurat()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-md hidden-view">
+                                <i class="fa-solid fa-plus mr-1"></i> Ajukan Surat Baru
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm whitespace-nowrap">
+                                <thead class="bg-slate-50 text-slate-600 font-medium border-b border-slate-200">
+                                    <tr>
+                                        <th class="px-5 py-3">Tanggal</th>
+                                        <th class="px-5 py-3">Pemohon</th>
+                                        <th class="px-5 py-3">Jenis Surat</th>
+                                        <th class="px-5 py-3">Keperluan</th>
+                                        <th class="px-5 py-3">Status</th>
+                                        <th class="px-5 py-3 text-center" id="thAksiSurat">Aksi Admin</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tableSurat" class="divide-y divide-gray-100 text-gray-700">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: KEUANGAN -->
+                <div id="view-keuangan" class="view-section fade-in hidden-view">
+                    <div id="panelFormKeuangan" class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
+                        <h3 class="font-bold text-gray-800 text-lg mb-4">Input Transaksi Kas</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <select id="trxJenis" class="border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                                <option value="Pemasukan">Pemasukan (+)</option>
+                                <option value="Pengeluaran">Pengeluaran (-)</option>
+                            </select>
+                            <input type="text" id="trxKategori" class="border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Kategori (Misal: Iuran, Sampah, dll)">
+                            <input type="number" id="trxNominal" class="border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Nominal (Rp)">
+                            <input type="text" id="trxKet" class="border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Keterangan singkat">
+                        </div>
+                        <button onclick="simpanTransaksi()" class="mt-4 bg-green-600 text-white px-6 py-2 rounded-lg font-medium shadow-md hover:bg-green-700">Simpan Transaksi</button>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="p-5 border-b border-gray-100">
+                            <h3 class="font-bold text-gray-800 text-lg">Buku Kas RT</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm whitespace-nowrap">
+                                <thead class="bg-slate-50 text-slate-600 font-medium border-b border-slate-200">
+                                    <tr>
+                                        <th class="px-5 py-3">Tanggal</th>
+                                        <th class="px-5 py-3">Kategori</th>
+                                        <th class="px-5 py-3">Keterangan</th>
+                                        <th class="px-5 py-3 text-right">Masuk</th>
+                                        <th class="px-5 py-3 text-right">Keluar</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tableKeuangan" class="divide-y divide-gray-100 text-gray-700">
+                                </tbody>
+                                <tfoot class="bg-slate-50 font-bold border-t border-gray-200">
+                                    <tr>
+                                        <td colspan="3" class="px-5 py-3 text-right text-gray-700">Total Saldo Aktif:</td>
+                                        <td colspan="2" class="px-5 py-3 text-right text-green-600" id="footSaldoAkhir">Rp 0</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: IURAN -->
+                <div id="view-iuran" class="view-section fade-in hidden-view">
+                    <div id="panelAdminIuran" class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6" style="display:none;">
+                        <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+                            <h3 class="font-bold text-gray-800 text-lg">Manajemen Iuran Warga</h3>
+                            <div class="flex items-center gap-3">
+                                <label class="text-sm text-gray-600 font-medium">Bulan:</label>
+                                <select id="filterBulanIuran" onchange="renderTableIuran()" class="border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none bg-slate-50">
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="p-5 border-b border-gray-100">
+                            <h3 class="font-bold text-gray-800 text-lg">Tagihan Iuran - <span id="labelBulanIuran" class="text-blue-600"></span></h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm whitespace-nowrap">
+                                <thead class="bg-slate-50 text-slate-600 font-medium border-b border-slate-200">
+                                    <tr>
+                                        <th class="px-5 py-3">Bulan</th>
+                                        <th class="px-5 py-3">Warga</th>
+                                        <th class="px-5 py-3">Tagihan</th>
+                                        <th class="px-5 py-3 text-center">Status</th>
+                                        <th class="px-5 py-3 text-center" id="thAksiIuran">Aksi Pembayaran</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tableIuran" class="divide-y divide-gray-100 text-gray-700">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- PANIC BUTTON (Global) -->
+    <button id="panicBtn" onclick="triggerPanic()" class="hidden-view fixed bottom-6 right-6 bg-red-600 hover:bg-red-700 text-white w-16 h-16 rounded-full shadow-[0_0_20px_rgba(220,38,38,0.6)] flex items-center justify-center z-50 transition-transform transform hover:scale-110 active:scale-95 animate-pulse group cursor-pointer border-4 border-white">
+        <i class="fa-solid fa-phone-volume text-2xl group-hover:rotate-12 transition-transform"></i>
+    </button>
+    <div id="panicTooltip" class="hidden-view fixed bottom-24 right-6 bg-slate-800 text-white text-xs py-1 px-3 rounded shadow-lg z-50 opacity-0 transition-opacity">
+        Darurat? Hubungi RT/Keamanan via WA
+    </div>
+
+    <!-- CUSTOM MODALS & TOASTS -->
+    <div id="toast-container"></div>
+
+    <!-- Modal Konfirmasi -->
+    <div id="customModal" class="fixed inset-0 z-[99999] flex items-center justify-center bg-black bg-opacity-50 hidden-view opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-11/12 max-w-sm transform scale-95 transition-transform duration-300" id="customModalBox">
+            <h3 class="text-lg font-bold text-gray-800 mb-2" id="modalTitle">Konfirmasi</h3>
+            <p class="text-gray-600 text-sm mb-6" id="modalBody">Apakah Anda yakin?</p>
+            <div class="flex justify-end gap-3">
+                <button onclick="closeModal()" class="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors" id="modalBtnCancel">Batal</button>
+                <button class="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors" id="modalBtnConfirm">Ya, Lanjutkan</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Input Warga -->
+    <div id="modalFormWarga" class="fixed inset-0 z-[99990] flex items-center justify-center bg-black bg-opacity-50 hidden-view">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-11/12 max-w-2xl max-h-[90vh] overflow-y-auto">
+            <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Form Data Warga</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label class="text-xs text-gray-500 block mb-1">No. KK</label><input type="text" id="wNoKK" class="w-full border rounded p-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none"></div>
+                <div><label class="text-xs text-gray-500 block mb-1">NIK</label><input type="text" id="wNIK" class="w-full border rounded p-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none"></div>
+                <div><label class="text-xs text-gray-500 block mb-1">Nama Lengkap</label><input type="text" id="wNama" class="w-full border rounded p-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none"></div>
+                <div>
+                    <label class="text-xs text-gray-500 block mb-1">Jenis Kelamin</label>
+                    <select id="wJK" class="w-full border rounded p-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none">
+                        <option value="L">Laki-Laki</option><option value="P">Perempuan</option>
+                    </select>
+                </div>
+                <div><label class="text-xs text-gray-500 block mb-1">Pekerjaan</label><input type="text" id="wKerja" class="w-full border rounded p-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none"></div>
+                <div><label class="text-xs text-gray-500 block mb-1">No HP</label><input type="text" id="wHP" class="w-full border rounded p-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none"></div>
+                <div class="md:col-span-2"><label class="text-xs text-gray-500 block mb-1">Alamat Domisili</label><input type="text" id="wAlamat" class="w-full border rounded p-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none"></div>
+            </div>
+            <div class="flex justify-end gap-3 mt-6 border-t pt-4">
+                <button onclick="document.getElementById('modalFormWarga').classList.add('hidden-view')" class="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg text-sm">Batal</button>
+                <button onclick="simpanWarga()" class="px-4 py-2 text-white bg-blue-600 rounded-lg text-sm font-medium">Simpan Data</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal QRIS Pembayaran -->
+    <div id="modalQRIS" class="fixed inset-0 z-[99990] flex items-center justify-center bg-black bg-opacity-50 hidden-view opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-11/12 max-w-sm transform scale-95 transition-transform duration-300" id="modalQRISBox">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h3 class="text-lg font-bold text-gray-800"><i class="fa-solid fa-qrcode text-indigo-600 mr-2"></i> Pembayaran QRIS</h3>
+                <button onclick="tutupModalQRIS()" class="text-gray-400 hover:text-red-500"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="text-center">
+                <p class="text-sm text-gray-600 mb-3">Scan QR code di bawah menggunakan aplikasi M-Banking atau e-Wallet Anda (Dana, OVO, GoPay, dll).</p>
+                <div class="bg-gray-100 p-3 rounded-xl inline-block mb-3 border-2 border-dashed border-indigo-200">
+                    <!-- Gunakan API QR Code Generator Dummy untuk Preview -->
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=DUMMY_QRIS_RT_01_TEST" alt="QRIS" class="mx-auto rounded-lg shadow-sm w-48 h-48">
+                </div>
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Total Tagihan:</p>
+                <p class="text-2xl font-bold text-indigo-700 mb-6" id="qrisNominal">Rp 0</p>
+
+                <button onclick="konfirmasiWAQRIS()" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all flex justify-center items-center gap-2">
+                    <i class="fa-brands fa-whatsapp text-xl"></i> <span>Konfirmasi ke Admin via WA</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div id="printArea"></div>
+
+<!-- SCRIPT LENGKAP -->
+<script>
+    // KONFIGURASI APLIKASI
+    // UBAH IS_PREVIEW KE false JIKA AKAN DI-DEPLOY KE BLOGGER
+    const IS_PREVIEW = true; 
+    const GAS_URL = "URL_DEPLOY_GAS_ANDA_DISINI"; 
+    const WA_DARURAT = "6281234567890"; // Nomor WA Pengurus RT untuk Panic Button
+
+    // ==========================================
+    // DATABASE DUMMY (Hanya berjalan jika IS_PREVIEW = true)
+    // ==========================================
+    let DB = {
+        users: [
+            { id: 1, username: 'admin', password: 'edudigital', role: 'admin', nama: 'Bpk. Budi (Ketua RT)' },
+            { id: 2, username: 'peserta', password: 'edudigital', role: 'warga', nama: 'Sdr. Andi (Warga)' }
+        ],
+        warga: [
+            { id: 1, no_kk: '320101010101', nik: '320101010102', nama: 'Andi S', jk: 'L', kerja: 'Karyawan', hp: '0811', alamat: 'Blok A/1' },
+            { id: 2, no_kk: '320101010101', nik: '320101010103', nama: 'Siti M', jk: 'P', kerja: 'IRT', hp: '0812', alamat: 'Blok A/1' }
+        ],
+        pengumuman: [
+            { id: 1, tgl: '26/05/2026', judul: 'Kerja Bakti Minggu Depan', konten: 'Mohon kehadiran seluruh bapak-bapak untuk membersihkan selokan di blok A.', penulis: 'Admin RT' }
+        ],
+        keluhan: [
+            { id: 1, tgl: '25/05/2026', user: 'peserta', nama: 'Sdr. Andi', kategori: 'Infrastruktur', desc: 'Lampu jalan depan Blok A mati.', status: 'Diproses', tanggapan: 'Tukang sedang dipanggil.' }
+        ],
+        iuran: [
+            { id: 1, user: 'peserta', nama: 'Sdr. Andi', bulan: '05-2026', nominal: 50000, status: 'Belum Lunas' },
+            { id: 2, user: 'peserta', nama: 'Sdr. Andi', bulan: '04-2026', nominal: 50000, status: 'Lunas' }
+        ],
+        keuangan: [
+            { id: 1, tgl: '01/05/2026', jenis: 'Pemasukan', kategori: 'Iuran', ket: 'Iuran April Blok B', masuk: 1500000, keluar: 0 },
+            { id: 2, tgl: '05/05/2026', jenis: 'Pengeluaran', kategori: 'Keamanan', ket: 'Gaji Satpam', masuk: 0, keluar: 1000000 }
+        ],
+        surat: [
+            { id: 1, tgl: '24/05/2026', user: 'peserta', nama: 'Sdr. Andi', jenis: 'Surat Pengantar KTP', ket: 'Perpanjang', status: 'Selesai' }
+        ]
+    };
+
+    // Global State
+    let currentUser = null;
+    let currentViewId = 'view-dashboard';
+    let currentMonth = "05-2026"; // Default simulasi bulan berjalan
+
+    // ==========================================
+    // UI CORE UTILITIES (NO ALERTS)
+    // ==========================================
+    function showToast(msg, type = 'info') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-triangle-exclamation' : 'fa-info-circle'} mr-2"></i> ${msg}`;
+        container.appendChild(toast);
+        
+        // Animasi masuk
+        setTimeout(() => toast.classList.add('show'), 10);
+        
+        // Hapus setelah 3 detik
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    let modalCallback = null;
+    function showModal(title, msg, onConfirm) {
+        document.getElementById('modalTitle').innerText = title;
+        document.getElementById('modalBody').innerText = msg;
+        modalCallback = onConfirm;
+        
+        const modal = document.getElementById('customModal');
+        const box = document.getElementById('customModalBox');
+        modal.classList.remove('hidden-view');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            box.classList.remove('scale-95');
+        }, 10);
+    }
+
+    function closeModal() {
+        const modal = document.getElementById('customModal');
+        const box = document.getElementById('customModalBox');
+        modal.classList.add('opacity-0');
+        box.classList.add('scale-95');
+        setTimeout(() => modal.classList.add('hidden-view'), 300);
+        modalCallback = null;
+    }
+
+    document.getElementById('modalBtnConfirm').addEventListener('click', () => {
+        if(modalCallback) modalCallback();
+        closeModal();
+    });
+
+    function showLoader(btnElement) {
+        if(!btnElement) return;
+        btnElement.dataset.original = btnElement.innerHTML;
+        btnElement.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Loading...`;
+        btnElement.disabled = true;
+        btnElement.classList.add('opacity-70');
+    }
+
+    function hideLoader(btnElement) {
+        if(!btnElement) return;
+        btnElement.innerHTML = btnElement.dataset.original;
+        btnElement.disabled = false;
+        btnElement.classList.remove('opacity-70');
+    }
+
+    // ==========================================
+    // API & DATA HANDLING
+    // ==========================================
+    async function apiCall(action, payload = {}) {
+        if (IS_PREVIEW) {
+            // Simulasi Network Delay
+            await new Promise(r => setTimeout(r, 600)); 
+            return handleDummyLogic(action, payload);
+        } else {
+            // Pemanggilan ke GAS Backend
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: action, payload: payload })
+                });
+                const result = await response.json();
+                if(result.status === 'success') return result.data;
+                else throw new Error(result.message);
+            } catch (error) {
+                showToast("Gagal terhubung ke server: " + error.message, "error");
+                throw error;
+            }
+        }
+    }
+
+    // Logika pengolahan DB Dummy
+    function handleDummyLogic(action, p) {
+        const tglNow = new Date().toLocaleDateString('id-ID');
+        switch(action) {
+            case 'login':
+                const user = DB.users.find(u => u.username === p.username && u.password === p.password);
+                if(user) return { username: user.username, role: user.role, nama: user.nama };
+                throw new Error("Username atau password salah!");
+            
+            // Tambahan logia Register Dummy
+            case 'register':
+                const exist = DB.users.find(u => String(u.username) === String(p.username));
+                if(exist) throw new Error("NIK / Username tersebut sudah terdaftar!");
+                DB.users.push({ id: Date.now(), username: p.username, password: p.password, role: 'warga', nama: p.nama });
+                return true;
+
+            // Warga
+            case 'getWarga': return DB.warga;
+            case 'addWarga': 
+                p.id = Date.now(); DB.warga.push(p); return true;
+            case 'delWarga': 
+                DB.warga = DB.warga.filter(w => w.id !== p.id); return true;
+            
+            // Pengumuman
+            case 'getPengumuman': return DB.pengumuman.reverse();
+            case 'addBerita':
+                DB.pengumuman.push({ id: Date.now(), tgl: tglNow, judul: p.judul, konten: p.konten, penulis: p.penulis }); return true;
+            
+            // Keluhan
+            case 'getKeluhan': 
+                return DB.keluhan;
+            case 'addKeluhan':
+                DB.keluhan.push({ id: Date.now(), tgl: tglNow, user: p.user, nama: p.nama, kategori: p.kategori, desc: p.desc, status: 'Menunggu', tanggapan: '-' }); return true;
+            case 'updateKeluhan':
+                const kIdx = DB.keluhan.findIndex(k => String(k.id) === String(p.id));
+                if(kIdx > -1) { DB.keluhan[kIdx].status = p.status; DB.keluhan[kIdx].tanggapan = p.tanggapan; } return true;
+            
+            // Surat
+            case 'getSurat': return DB.surat;
+            case 'addSurat':
+                DB.surat.push({ id: Date.now(), tgl: tglNow, user: p.user, nama: p.nama, jenis: p.jenis, ket: p.ket, status: 'Menunggu' }); return true;
+            case 'updateSurat':
+                const sIdx = DB.surat.findIndex(s => String(s.id) === String(p.id));
+                if(sIdx > -1) DB.surat[sIdx].status = p.status; return true;
+            
+            // Keuangan & Iuran
+            case 'getKeuangan': return DB.keuangan;
+            case 'addTrx':
+                DB.keuangan.push({ id: Date.now(), tgl: tglNow, jenis: p.jenis, kategori: p.kategori, ket: p.ket, masuk: p.masuk, keluar: p.keluar }); return true;
+            case 'getIuran': return DB.iuran;
+            case 'updateIuran':
+                const iIdx = DB.iuran.findIndex(i => String(i.id) === String(p.id));
+                if(iIdx > -1) DB.iuran[iIdx].status = 'Lunas'; return true;
+            
+            default: return [];
+        }
+    }
+
+    // ==========================================
+    // AUTH & NAVIGATION
+    // ==========================================
+    
+    // Fungsi Toggle Tampilan Form Login & Register
+    function showRegister() {
+        document.getElementById('panelLogin').classList.add('hidden-view');
+        document.getElementById('panelRegister').classList.remove('hidden-view');
+    }
+
+    function showLogin() {
+        document.getElementById('panelRegister').classList.add('hidden-view');
+        document.getElementById('panelLogin').classList.remove('hidden-view');
+    }
+
+    // Fungsi Registrasi User Baru
+    async function handleRegister() {
+        const namaStr = document.getElementById('regNama').value.trim();
+        const nikStr = document.getElementById('regNIK').value.trim();
+        const passStr = document.getElementById('regPassword').value.trim();
+        const btn = document.getElementById('btnRegister');
+
+        if(!namaStr || !nikStr || !passStr) {
+            return showToast("Harap isi seluruh kolom pendaftaran!", "error");
+        }
+
+        showLoader(btn);
+        try {
+            await apiCall('register', { nama: namaStr, username: nikStr, password: passStr });
+            showToast("Pendaftaran berhasil! Silakan masuk dengan akun Anda.", "success");
+            
+            // Reset input dan kembali ke login
+            document.getElementById('regNama').value = '';
+            document.getElementById('regNIK').value = '';
+            document.getElementById('regPassword').value = '';
+            showLogin();
+
+        } catch (err) {
+            showToast(err.message, "error");
+        } finally {
+            hideLoader(btn);
+        }
+    }
+
+    // Fungsi Login
+    async function handleLogin() {
+        const userStr = document.getElementById('loginUsername').value.trim();
+        const passStr = document.getElementById('loginPassword').value.trim();
+        const btn = document.getElementById('btnLogin');
+        
+        if(!userStr || !passStr) return showToast("Harap isi username dan password!", "error");
+        
+        showLoader(btn);
+        try {
+            currentUser = await apiCall('login', { username: userStr, password: passStr });
+            showToast(`Selamat datang, ${currentUser.nama}!`, "success");
+            setupAppEnvironment();
+        } catch (err) {
+            showToast(err.message, "error");
+        } finally {
+            hideLoader(btn);
+        }
+    }
+
+    function handleLogout() {
+        showModal("Keluar", "Anda yakin ingin mengakhiri sesi?", () => {
+            currentUser = null;
+            document.getElementById('mainApp').classList.add('hidden-view');
+            document.getElementById('loginScreen').classList.remove('hidden-view');
+            document.getElementById('loginScreen').classList.add('flex');
+            document.getElementById('panicBtn').classList.add('hidden-view');
+            document.getElementById('loginUsername').value = '';
+            document.getElementById('loginPassword').value = '';
+            showLogin(); // Pastikan form login yang tampil (bukan register)
+        });
+    }
+
+    function setupAppEnvironment() {
+        document.getElementById('loginScreen').classList.add('hidden-view');
+        document.getElementById('loginScreen').classList.remove('flex');
+        document.getElementById('mainApp').classList.remove('hidden-view');
+        document.getElementById('panicBtn').classList.remove('hidden-view');
+        
+        document.getElementById('sidebarUserName').innerText = currentUser.nama;
+        document.getElementById('sidebarUserRole').innerText = currentUser.role;
+        document.getElementById('sidebarAvatar').innerText = currentUser.nama.charAt(0);
+        
+        renderSidebarMenu();
+        navigateTo('view-dashboard');
+        
+        // Setup Date
+        const opt = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('topbarDate').innerText = new Date().toLocaleDateString('id-ID', opt);
+        
+        // Setup Panic Btn event
+        const pBtn = document.getElementById('panicBtn');
+        pBtn.addEventListener('mouseenter', () => document.getElementById('panicTooltip').classList.remove('opacity-0', 'hidden-view'));
+        pBtn.addEventListener('mouseleave', () => document.getElementById('panicTooltip').classList.add('opacity-0', 'hidden-view'));
+    }
+
+    function renderSidebarMenu() {
+        const menuContainer = document.getElementById('sidebarMenu');
+        let menus = [
+            { id: 'view-dashboard', icon: 'fa-chart-pie', text: 'Dashboard' }
+        ];
+
+        if (currentUser.role === 'admin') {
+            menus.push({ id: 'view-warga', icon: 'fa-users', text: 'Data Warga' });
+            menus.push({ id: 'view-berita', icon: 'fa-newspaper', text: 'CMS Pengumuman' });
+            menus.push({ id: 'view-keluhan', icon: 'fa-clipboard-list', text: 'Keluhan Warga' });
+            menus.push({ id: 'view-iuran', icon: 'fa-money-check', text: 'Manajemen Iuran' });
+            menus.push({ id: 'view-keuangan', icon: 'fa-book', text: 'Buku Kas' });
+            menus.push({ id: 'view-surat', icon: 'fa-envelope-open-text', text: 'Layanan Surat' });
+        } else {
+            menus.push({ id: 'view-keluhan', icon: 'fa-bullhorn', text: 'Lapor Keluhan' });
+            menus.push({ id: 'view-iuran', icon: 'fa-receipt', text: 'Iuran Saya' });
+            menus.push({ id: 'view-keuangan', icon: 'fa-wallet', text: 'Info Kas RT' });
+            menus.push({ id: 'view-surat', icon: 'fa-file-signature', text: 'Pengajuan Surat' });
+        }
+
+        menuContainer.innerHTML = menus.map(m => `
+            <button onclick="navigateTo('${m.id}')" class="w-full text-left flex items-center gap-3 px-5 py-3 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors border-l-4 border-transparent focus:outline-none menu-item" data-target="${m.id}">
+                <i class="fa-solid ${m.icon} w-5 text-center"></i> <span class="font-medium">${m.text}</span>
+            </button>
+        `).join('');
+    }
+
+    function navigateTo(viewId) {
+        // Update Sidebar styling
+        document.querySelectorAll('.menu-item').forEach(el => {
+            el.classList.remove('bg-slate-700', 'border-blue-500', 'text-white');
+            el.classList.add('text-slate-300', 'border-transparent');
+            if(el.dataset.target === viewId) {
+                el.classList.add('bg-slate-700', 'border-blue-500', 'text-white');
+                document.getElementById('topbarTitle').innerText = el.querySelector('span').innerText;
+            }
+        });
+
+        // Hide all views, show target
+        document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden-view'));
+        document.getElementById(viewId).classList.remove('hidden-view');
+        
+        // Hide sidebar on mobile after click
+        const sidebar = document.getElementById('sidebar');
+        if(window.innerWidth < 768) sidebar.classList.add('hidden');
+
+        // Load specific data based on view
+        loadDataForView(viewId);
+    }
+
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        sidebar.classList.toggle('hidden');
+        if(!sidebar.classList.contains('hidden')) sidebar.classList.add('absolute', 'h-full', 'w-64');
+    }
+
+    // ==========================================
+    // VIEW CONTROLLERS (LOAD DATA)
+    // ==========================================
+    async function loadDataForView(viewId) {
+        try {
+            if (viewId === 'view-dashboard') await renderDashboard();
+            else if (viewId === 'view-warga' && currentUser.role === 'admin') await renderTableWarga();
+            else if (viewId === 'view-berita' && currentUser.role === 'admin') await renderTableBerita();
+            else if (viewId === 'view-keluhan') await renderTableKeluhan();
+            else if (viewId === 'view-iuran') await renderTableIuran();
+            else if (viewId === 'view-keuangan') await renderTableKeuangan();
+            else if (viewId === 'view-surat') await renderTableSurat();
+        } catch(e) {
+            console.error(e);
+        }
+    }
+
+    // --- DASHBOARD ---
+    async function renderDashboard() {
+        // Load feed pengumuman (Global)
+        const berita = await apiCall('getPengumuman');
+        const feedContainer = document.getElementById('feedPengumuman');
+        
+        if(berita.length === 0) {
+            feedContainer.innerHTML = `<div class="text-center text-gray-400 py-4">Belum ada pengumuman terbaru.</div>`;
+        } else {
+            feedContainer.innerHTML = berita.map(b => `
+                <div class="border-l-4 border-blue-500 pl-4 py-2 bg-slate-50 rounded-r-lg mb-3">
+                    <div class="flex justify-between items-start">
+                        <h4 class="font-bold text-gray-800">${b.judul}</h4>
+                        <span class="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">${b.tgl}</span>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-1">${b.konten}</p>
+                    <p class="text-xs text-gray-400 mt-2"><i class="fa-solid fa-user-pen mr-1"></i> ${b.penulis}</p>
+                </div>
+            `).join('');
+        }
+
+        // Load Keuangan Dasar
+        const keuangan = await apiCall('getKeuangan');
+        let totalMasuk = 0, totalKeluar = 0;
+        keuangan.forEach(k => { totalMasuk += parseInt(k.masuk||0); totalKeluar += parseInt(k.keluar||0); });
+        let saldo = totalMasuk - totalKeluar;
+        document.getElementById('dashSaldoKas').innerText = `Rp ${saldo.toLocaleString('id-ID')}`;
+
+        // Role Specific
+        const widgetContainer = document.getElementById('dashboardWidgets');
+        widgetContainer.innerHTML = '';
+
+        if(currentUser.role === 'admin') {
+            const warga = await apiCall('getWarga');
+            const keluhan = await apiCall('getKeluhan');
+            const surat = await apiCall('getSurat');
+            let pendingKeluhan = keluhan.filter(k => k.status !== 'Selesai').length;
+            let pendingSurat = surat.filter(s => s.status === 'Menunggu').length;
+
+            widgetContainer.innerHTML = `
+                ${makeWidget('Total Warga', warga.length + ' Jiwa', 'fa-users', 'bg-blue-500')}
+                ${makeWidget('Surat Pending', pendingSurat, 'fa-envelope', 'bg-yellow-500')}
+                ${makeWidget('Keluhan Aktif', pendingKeluhan, 'fa-clipboard-question', 'bg-red-500')}
+                ${makeWidget('Kas RT', 'Rp'+(saldo/1000)+'K', 'fa-wallet', 'bg-green-500')}
+            `;
+            document.getElementById('dashIuranPanel').classList.add('hidden-view');
+        } else {
+            // Dashboard Warga
+            const semuaIuran = await apiCall('getIuran');
+            const iuranSaya = semuaIuran.find(i => i.user === currentUser.username && i.bulan === currentMonth);
+            
+            // Tambahan: Widget Menu Cepat untuk Warga
+            widgetContainer.innerHTML = `
+                <div onclick="navigateTo('view-surat')" class="bg-blue-600 hover:bg-blue-700 text-white rounded-xl p-5 shadow-md flex items-center justify-between cursor-pointer transition-transform transform hover:scale-105 active:scale-95 col-span-1 md:col-span-2">
+                    <div>
+                        <p class="text-blue-100 text-xs font-medium uppercase mb-1">Layanan Cepat</p>
+                        <p class="text-lg font-bold">Buat Pengajuan Surat</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-xl shadow-inner">
+                        <i class="fa-solid fa-file-signature"></i>
+                    </div>
+                </div>
+                <div onclick="navigateTo('view-keluhan')" class="bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl p-5 shadow-md flex items-center justify-between cursor-pointer transition-transform transform hover:scale-105 active:scale-95 col-span-1 md:col-span-2">
+                    <div>
+                        <p class="text-yellow-100 text-xs font-medium uppercase mb-1">Layanan Cepat</p>
+                        <p class="text-lg font-bold">Lapor Keluhan</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-full bg-yellow-400 flex items-center justify-center text-xl shadow-inner">
+                        <i class="fa-solid fa-bullhorn"></i>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('dashIuranPanel').classList.remove('hidden-view');
+            const stEl = document.getElementById('dashStatusIuran');
+            if(iuranSaya && iuranSaya.status === 'Lunas') {
+                stEl.className = 'p-3 rounded-lg text-center font-bold text-sm bg-green-100 text-green-700';
+                stEl.innerText = "LUNAS (Terima Kasih)";
+            } else {
+                stEl.className = 'p-3 rounded-lg text-center font-bold text-sm bg-red-100 text-red-700 animate-pulse';
+                stEl.innerText = "BELUM LUNAS (Segera Bayar)";
+            }
+        }
+    }
+
+    function makeWidget(title, value, icon, bgClass) {
+        return `
+            <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full ${bgClass} text-white flex items-center justify-center text-xl shadow-inner">
+                    <i class="fa-solid ${icon}"></i>
+                </div>
+                <div>
+                    <p class="text-gray-500 text-xs font-medium uppercase">${title}</p>
+                    <p class="text-2xl font-bold text-gray-800">${value}</p>
+                </div>
+            </div>`;
+    }
+
+    // --- MODUL WARGA (ADMIN) ---
+    async function renderTableWarga() {
+        const data = await apiCall('getWarga');
+        const tbody = document.getElementById('tableWarga');
+        if(data.length === 0) return tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4">Data kosong</td></tr>`;
+        
+        tbody.innerHTML = data.map((w, i) => `
+            <tr class="hover:bg-slate-50">
+                <td class="px-5 py-3">${w.no_kk}</td>
+                <td class="px-5 py-3">${w.nik}</td>
+                <td class="px-5 py-3 font-semibold text-gray-800">${w.nama}</td>
+                <td class="px-5 py-3">${w.jk}</td>
+                <td class="px-5 py-3 text-xs">${w.kerja}<br><span class="text-gray-400">${w.hp}</span></td>
+                <td class="px-5 py-3 text-center">
+                    <button onclick="hapusWarga(${w.id})" class="text-red-500 hover:text-red-700 bg-red-50 p-2 rounded"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function openFormWarga() {
+        // Reset form
+        ['wNoKK','wNIK','wNama','wKerja','wHP','wAlamat'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('modalFormWarga').classList.remove('hidden-view');
+    }
+
+    async function simpanWarga() {
+        const payload = {
+            no_kk: document.getElementById('wNoKK').value, nik: document.getElementById('wNIK').value,
+            nama: document.getElementById('wNama').value, jk: document.getElementById('wJK').value,
+            kerja: document.getElementById('wKerja').value, hp: document.getElementById('wHP').value,
+            alamat: document.getElementById('wAlamat').value
+        };
+        if(!payload.nama || !payload.nik) return showToast("Nama dan NIK wajib diisi", "error");
+        
+        try {
+            await apiCall('addWarga', payload);
+            showToast("Warga berhasil ditambahkan", "success");
+            document.getElementById('modalFormWarga').classList.add('hidden-view');
+            renderTableWarga();
+        } catch(e) { showToast(e.message, "error"); }
+    }
+
+    function hapusWarga(id) {
+        showModal("Hapus Warga", "Data yang dihapus tidak bisa dikembalikan.", async () => {
+            try {
+                await apiCall('delWarga', {id: id});
+                showToast("Data dihapus", "success");
+                renderTableWarga();
+            } catch(e) { showToast(e.message, "error"); }
+        });
+    }
+
+    // --- MODUL BERITA CMS (ADMIN) ---
+    async function renderTableBerita() {
+        const data = await apiCall('getPengumuman');
+        const list = document.getElementById('listRiwayatBerita');
+        if(data.length === 0) return list.innerHTML = `<div class="col-span-2 text-center text-gray-400">Belum ada pengumuman.</div>`;
+        
+        list.innerHTML = data.map(b => `
+            <div class="border rounded-xl p-4 shadow-sm bg-white hover:border-blue-300 transition-colors">
+                <div class="text-xs text-gray-400 mb-1">${b.tgl}</div>
+                <h4 class="font-bold text-gray-800 mb-2 truncate">${b.judul}</h4>
+                <p class="text-sm text-gray-600 line-clamp-2">${b.konten}</p>
+            </div>
+        `).join('');
+    }
+
+    async function simpanBerita() {
+        const j = document.getElementById('formBeritaJudul').value;
+        const k = document.getElementById('formBeritaKonten').value;
+        if(!j || !k) return showToast("Judul dan konten harus diisi", "error");
+        
+        try {
+            await apiCall('addBerita', { judul: j, konten: k, penulis: currentUser.nama });
+            showToast("Pengumuman dipublikasikan!", "success");
+            document.getElementById('formBeritaJudul').value = '';
+            document.getElementById('formBeritaKonten').value = '';
+            renderTableBerita();
+        } catch(e) { showToast(e.message, "error"); }
+    }
+
+    // --- MODUL KELUHAN ---
+    async function renderTableKeluhan() {
+        const isWarga = currentUser.role === 'warga';
+        
+        // Hide panel form secara default dan hapus display logic lama
+        document.getElementById('panelLaporKeluhan').classList.add('hidden-view');
+        document.getElementById('panelLaporKeluhan').style.display = ''; 
+        
+        // Atur visibilitas Tombol Tambah Keluhan (hanya untuk warga)
+        const btnTambah = document.getElementById('btnTambahKeluhan');
+        if(isWarga) btnTambah.classList.remove('hidden-view');
+        else btnTambah.classList.add('hidden-view');
+
+        document.getElementById('titleDaftarKeluhan').innerText = isWarga ? 'Riwayat Laporan Saya' : 'Daftar Laporan Masuk';
+        
+        // Sembunyikan kolom aksi untuk warga, kecuali jika ingin lihat tanggapan
+        document.getElementById('thAksiKeluhan').innerText = isWarga ? 'Tanggapan RT' : 'Aksi (Update Status)';
+
+        let data = await apiCall('getKeluhan');
+        if(isWarga) data = data.filter(d => d.user === currentUser.username); // Filter jika warga
+
+        const tbody = document.getElementById('tableKeluhan');
+        if(data.length === 0) return tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4">Tidak ada data keluhan</td></tr>`;
+        
+        tbody.innerHTML = data.map(k => {
+            let badgeClass = k.status === 'Selesai' ? 'bg-green-100 text-green-700' : 
+                             k.status === 'Diproses' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700';
+            
+            let aksiHTML = '';
+            if(!isWarga) {
+                aksiHTML = `
+                    <select onchange="updateStatusKeluhan(${k.id}, this.value)" class="border rounded p-1 text-xs outline-none focus:ring-1 focus:ring-blue-500 ${k.status==='Selesai'?'opacity-50 pointer-events-none':''}">
+                        <option value="Menunggu" ${k.status==='Menunggu'?'selected':''}>Menunggu</option>
+                        <option value="Diproses" ${k.status==='Diproses'?'selected':''}>Diproses</option>
+                        <option value="Selesai" ${k.status==='Selesai'?'selected':''}>Selesai</option>
+                    </select>
+                `;
+            } else {
+                aksiHTML = `<span class="text-xs text-gray-500 italic max-w-xs block truncate" title="${k.tanggapan}">${k.tanggapan}</span>`;
+            }
+
+            return `
+            <tr class="hover:bg-slate-50">
+                <td class="px-5 py-3 text-xs">${k.tgl}</td>
+                <td class="px-5 py-3 font-medium">${k.nama}</td>
+                <td class="px-5 py-3"><span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">${k.kategori}</span></td>
+                <td class="px-5 py-3 text-sm truncate max-w-xs" title="${k.desc}">${k.desc}</td>
+                <td class="px-5 py-3"><span class="px-2 py-1 rounded text-xs font-semibold ${badgeClass}">${k.status}</span></td>
+                <td class="px-5 py-3 text-center">${aksiHTML}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    function bukaFormKeluhan() {
+        document.getElementById('panelLaporKeluhan').classList.remove('hidden-view');
+        document.getElementById('contentArea').scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    function tutupFormKeluhan() {
+        document.getElementById('panelLaporKeluhan').classList.add('hidden-view');
+        document.getElementById('formKeluhanDeskripsi').value = '';
+    }
+
+    async function kirimKeluhan() {
+        const k = document.getElementById('formKeluhanKategori').value;
+        const d = document.getElementById('formKeluhanDeskripsi').value;
+        if(!d) return showToast("Deskripsi keluhan wajib diisi", "error");
+        
+        try {
+            await apiCall('addKeluhan', { user: currentUser.username, nama: currentUser.nama, kategori: k, desc: d });
+            showToast("Laporan terkirim ke Pengurus", "success");
+            tutupFormKeluhan();
+            renderTableKeluhan();
+        } catch(e) { showToast(e.message, "error"); }
+    }
+
+    async function updateStatusKeluhan(id, statusBaru) {
+        try {
+            // Simulasi auto-tanggapan singkat
+            let tanggapan = statusBaru === 'Selesai' ? 'Telah diselesaikan oleh tim.' : 'Sedang ditindaklanjuti.';
+            await apiCall('updateKeluhan', { id: id, status: statusBaru, tanggapan: tanggapan });
+            showToast("Status berhasil diperbarui", "success");
+            renderTableKeluhan();
+        } catch(e) { showToast(e.message, "error"); }
+    }
+
+    // --- MODUL SURAT ---
+    async function renderTableSurat() {
+        const isWarga = currentUser.role === 'warga';
+        
+        // Hide panel form secara default dan hapus display logic lama
+        document.getElementById('panelFormSurat').classList.add('hidden-view');
+        document.getElementById('panelFormSurat').style.display = ''; 
+        
+        // Atur visibilitas Tombol Tambah Surat (hanya untuk warga)
+        const btnTambah = document.getElementById('btnTambahSurat');
+        if(isWarga) btnTambah.classList.remove('hidden-view');
+        else btnTambah.classList.add('hidden-view');
+
+        document.getElementById('thAksiSurat').innerText = isWarga ? 'File Surat' : 'Persetujuan';
+
+        let data = await apiCall('getSurat');
+        if(isWarga) data = data.filter(d => d.user === currentUser.username);
+
+        const tbody = document.getElementById('tableSurat');
+        if(data.length === 0) return tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4">Belum ada pengajuan surat</td></tr>`;
+        
+        tbody.innerHTML = data.map(s => {
+            let bClass = s.status === 'Selesai' ? 'bg-green-100 text-green-700' : 
+                         s.status === 'Ditolak' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700';
+            let aksiHTML = '';
+            
+            if(!isWarga) {
+                if(s.status === 'Menunggu') {
+                    aksiHTML = `
+                        <button onclick="prosesSurat('${s.id}', 'Selesai')" class="bg-green-500 text-white text-xs px-2 py-1 rounded mr-1 hover:bg-green-600"><i class="fa-solid fa-check"></i> ACC</button>
+                        <button onclick="prosesSurat('${s.id}', 'Ditolak')" class="bg-red-500 text-white text-xs px-2 py-1 rounded hover:bg-red-600"><i class="fa-solid fa-xmark"></i> Tolak</button>
+                    `;
+                } else {
+                    aksiHTML = `<span class="text-xs text-gray-400">Diproses</span>`;
+                }
+            } else {
+                if(s.status === 'Selesai') aksiHTML = `<button onclick="cetakSurat('${s.id}')" class="text-blue-600 hover:underline text-xs font-semibold"><i class="fa-solid fa-print"></i> Cetak / Simpan PDF</button>`;
+                else aksiHTML = '-';
+            }
+
+            return `
+            <tr class="hover:bg-slate-50">
+                <td class="px-5 py-3 text-xs">${s.tgl}</td>
+                <td class="px-5 py-3 font-medium">${s.nama}</td>
+                <td class="px-5 py-3 text-sm">${s.jenis}</td>
+                <td class="px-5 py-3 text-sm">${s.ket}</td>
+                <td class="px-5 py-3"><span class="px-2 py-1 rounded text-xs font-semibold ${bClass}">${s.status}</span></td>
+                <td class="px-5 py-3 text-center">${aksiHTML}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    function bukaFormSurat() {
+        document.getElementById('panelFormSurat').classList.remove('hidden-view');
+        document.getElementById('contentArea').scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    function tutupFormSurat() {
+        document.getElementById('panelFormSurat').classList.add('hidden-view');
+        document.getElementById('formSuratKet').value = '';
+    }
+
+    async function ajukanSurat() {
+        const j = document.getElementById('formSuratJenis').value;
+        const k = document.getElementById('formSuratKet').value;
+        if(!k) return showToast("Keperluan wajib diisi", "error");
+        
+        try {
+            await apiCall('addSurat', { user: currentUser.username, nama: currentUser.nama, jenis: j, ket: k });
+            showToast("Pengajuan berhasil dikirim", "success");
+            tutupFormSurat();
+            renderTableSurat();
+        } catch(e) { showToast(e.message, "error"); }
+    }
+
+    async function prosesSurat(id, status) {
+        showModal("Konfirmasi Surat", `Ubah status surat menjadi ${status}?`, async () => {
+            try {
+                await apiCall('updateSurat', { id: id, status: status });
+                showToast(`Surat telah di-${status}`, "success");
+                renderTableSurat();
+            } catch(e) { showToast(e.message, "error"); }
+        });
+    }
+
+    async function cetakSurat(id) {
+        showToast("Menyiapkan dokumen...", "info");
+        
+        try {
+            // Ambil detail surat yang ingin dicetak
+            const data = await apiCall('getSurat');
+            
+            // FIX 1: Pastikan ID dicari menggunakan format String agar sesuai dengan respon Database
+            const surat = data.find(s => String(s.id) === String(id));
+            
+            if(!surat) return showToast("Data surat tidak ditemukan", "error");
+
+            // FIX 2: Buka Jendela Tab Baru untuk Print agar lebih stabil & rapi
+            const printWin = window.open('', '_blank');
+            if (!printWin) {
+                return showToast("Browser memblokir Pop-up. Mohon izinkan pop-up untuk mencetak!", "error");
+            }
+
+            const printHTML = `
+                <!DOCTYPE html>
+                <html lang="id">
+                <head>
+                    <title>Cetak Surat - ${surat.jenis}</title>
+                    <style>
+                        body { font-family: 'Times New Roman', Times, serif; color: black; line-height: 1.6; max-width: 800px; margin: auto; padding: 2cm; }
+                        .header { text-align: center; border-bottom: 3px solid black; margin-bottom: 20px; padding-bottom: 15px; }
+                        .header h2 { margin: 0; font-size: 24px; font-weight: bold; }
+                        .header p { margin: 5px 0 0 0; font-size: 16px; }
+                        .title-section { text-align: center; margin-bottom: 40px; }
+                        .title-section h3 { text-decoration: underline; margin-bottom: 5px; text-transform: uppercase; font-size: 18px; }
+                        .title-section p { margin: 0; }
+                        .content { text-align: justify; margin-bottom: 20px; }
+                        table { width: 100%; margin-bottom: 30px; margin-left: 20px; border-collapse: collapse; }
+                        td { padding: 6px 0; vertical-align: top; }
+                        .ttd { float: right; text-align: center; width: 250px; }
+                        .ttd p { margin: 0; }
+                        .clear { clear: both; }
+                        @media print {
+                            body { padding: 0; margin: 0; }
+                            @page { margin: 2cm; }
+                        }
+                    </style>
+                </head>
+                <body onload="window.print(); window.onafterprint = function(){ window.close(); }">
+                    <div class="header">
+                        <h2>PENGURUS RUKUN TETANGGA (RT)</h2>
+                        <p>Sistem Informasi Rukun Tetangga (Smart RT)</p>
+                    </div>
+                    
+                    <div class="title-section">
+                        <h3>${surat.jenis}</h3>
+                        <p>Nomor: ${surat.id} / RT / ${new Date().getFullYear()}</p>
+                    </div>
+                    
+                    <div class="content">
+                        <p>Yang bertanda tangan di bawah ini, selaku Ketua Pengurus Rukun Tetangga (RT), menerangkan dengan sebenarnya bahwa:</p>
+                    </div>
+                    
+                    <table>
+                        <tr><td style="width: 200px;">Nama Lengkap Pemohon</td><td>: <b>${surat.nama}</b></td></tr>
+                        <tr><td>ID Warga / Akun</td><td>: ${surat.user}</td></tr>
+                        <tr><td>Keperluan Pengajuan</td><td>: ${surat.ket}</td></tr>
+                        <tr><td>Tanggal Disetujui</td><td>: ${surat.tgl}</td></tr>
+                    </table>
+                    
+                    <div class="content">
+                        <p>Demikian surat pengantar/keterangan <b>${surat.jenis.toLowerCase()}</b> ini dibuat dan diberikan agar dapat dipergunakan sebagaimana mestinya oleh yang bersangkutan.</p>
+                    </div>
+                    
+                    <div class="ttd">
+                        <p style="margin-bottom: 70px;">Dikeluarkan pada: ${new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}<br>Ketua RT,</p>
+                        <p><b>( _______________________ )</b></p>
+                    </div>
+                    <div class="clear"></div>
+                </body>
+                </html>
+            `;
+            
+            // Menulis dokumen ke tab baru
+            printWin.document.open();
+            printWin.document.write(printHTML);
+            printWin.document.close();
+
+        } catch(e) {
+            showToast("Gagal menyiapkan dokumen: " + e.message, "error");
+        }
+    }
+
+    // --- MODUL KEUANGAN ---
+    async function renderTableKeuangan() {
+        const isAdmin = currentUser.role === 'admin';
+        document.getElementById('panelFormKeuangan').style.display = isAdmin ? 'block' : 'none';
+        
+        const data = await apiCall('getKeuangan');
+        const tbody = document.getElementById('tableKeuangan');
+        
+        let sal = 0;
+        if(data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4">Data kas kosong</td></tr>`;
+        } else {
+            tbody.innerHTML = data.map(k => {
+                let msk = parseInt(k.masuk||0); let klr = parseInt(k.keluar||0);
+                sal += (msk - klr);
+                return `
+                <tr class="hover:bg-slate-50 text-xs sm:text-sm">
+                    <td class="px-5 py-3 text-gray-500">${k.tgl}</td>
+                    <td class="px-5 py-3 font-semibold"><span class="bg-gray-100 px-2 py-1 rounded">${k.kategori}</span></td>
+                    <td class="px-5 py-3">${k.ket}</td>
+                    <td class="px-5 py-3 text-right text-green-600 font-medium">${msk > 0 ? '+Rp '+msk.toLocaleString('id-ID') : '-'}</td>
+                    <td class="px-5 py-3 text-right text-red-600 font-medium">${klr > 0 ? '-Rp '+klr.toLocaleString('id-ID') : '-'}</td>
+                </tr>`;
+            }).join('');
+        }
+        document.getElementById('footSaldoAkhir').innerText = `Rp ${sal.toLocaleString('id-ID')}`;
+    }
+
+    async function simpanTransaksi() {
+        const jns = document.getElementById('trxJenis').value;
+        const kat = document.getElementById('trxKategori').value;
+        const nom = parseInt(document.getElementById('trxNominal').value) || 0;
+        const ket = document.getElementById('trxKet').value;
+
+        if(!kat || nom <= 0) return showToast("Kategori dan nominal tidak valid", "error");
+
+        const p = { jenis: jns, kategori: kat, ket: ket, masuk: jns==='Pemasukan'?nom:0, keluar: jns==='Pengeluaran'?nom:0 };
+        try {
+            await apiCall('addTrx', p);
+            showToast("Transaksi tersimpan", "success");
+            document.getElementById('trxKategori').value = '';
+            document.getElementById('trxNominal').value = '';
+            document.getElementById('trxKet').value = '';
+            renderTableKeuangan();
+        } catch(e) { showToast(e.message, "error"); }
+    }
+
+    // --- MODUL IURAN ---
+    async function renderTableIuran() {
+        const isAdmin = currentUser.role === 'admin';
+        document.getElementById('panelAdminIuran').style.display = isAdmin ? 'block' : 'none';
+        document.getElementById('labelBulanIuran').innerText = currentMonth;
+        
+        // Tampilkan Header Kolom Aksi baik untuk Admin maupun Warga
+        document.getElementById('thAksiIuran').style.display = 'table-cell';
+
+        // Setup filter dropdown if admin
+        if(isAdmin) {
+            const f = document.getElementById('filterBulanIuran');
+            if(f.options.length === 0) {
+                ['03-2026','04-2026','05-2026','06-2026'].forEach(b => {
+                    f.add(new Option(b, b, false, b === currentMonth));
+                });
+            }
+            currentMonth = f.value;
+            document.getElementById('labelBulanIuran').innerText = currentMonth;
+        }
+
+        let data = await apiCall('getIuran');
+        // Filter: warga hanya lihat punyanya. Admin lihat bulan yang difilter
+        if(!isAdmin) {
+            data = data.filter(d => d.user === currentUser.username);
+        } else {
+            data = data.filter(d => d.bulan === currentMonth);
+        }
+
+        const tbody = document.getElementById('tableIuran');
+        if(data.length === 0) return tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4">Tidak ada data tagihan</td></tr>`;
+        
+        tbody.innerHTML = data.map(i => {
+            let bClass = i.status === 'Lunas' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700 font-bold animate-pulse';
+            let aksiHTML = '';
+            
+            if(isAdmin) {
+                if(i.status !== 'Lunas') {
+                    aksiHTML = `<td class="px-5 py-3 text-center"><button onclick="lunasiIuran(${i.id})" class="bg-blue-600 text-white text-xs px-3 py-1 rounded shadow hover:bg-blue-700"><i class="fa-solid fa-check-double mr-1"></i> Bayar / Lunasi</button></td>`;
+                } else {
+                    aksiHTML = `<td class="px-5 py-3 text-center text-xs text-green-600 font-bold"><i class="fa-solid fa-check"></i> Selesai</td>`;
+                }
+            } else {
+                // Tampilan tombol untuk Warga
+                if(i.status !== 'Lunas') {
+                    aksiHTML = `<td class="px-5 py-3 text-center"><button onclick="bukaModalQRIS('${i.bulan}', ${i.nominal})" class="bg-indigo-600 text-white text-xs px-3 py-1 rounded shadow hover:bg-indigo-700 transition-colors"><i class="fa-solid fa-qrcode mr-1"></i> Bayar QRIS</button></td>`;
+                } else {
+                    aksiHTML = `<td class="px-5 py-3 text-center text-xs text-green-600 font-bold"><i class="fa-solid fa-check"></i> Selesai</td>`;
+                }
+            }
+            
+            return `
+            <tr class="hover:bg-slate-50">
+                <td class="px-5 py-3 font-medium text-gray-600">${i.bulan}</td>
+                <td class="px-5 py-3">${i.nama} (${i.user})</td>
+                <td class="px-5 py-3 font-mono text-gray-800">Rp ${i.nominal.toLocaleString('id-ID')}</td>
+                <td class="px-5 py-3 text-center"><span class="px-3 py-1 rounded text-xs ${bClass}">${i.status}</span></td>
+                ${aksiHTML}
+            </tr>`;
+        }).join('');
+    }
+
+    async function lunasiIuran(id) {
+        showModal("Bayar Iuran", "Tandai iuran ini sebagai Lunas? (Otomatis masuk buku kas)", async () => {
+            try {
+                await apiCall('updateIuran', { id: id });
+                // Simulasi auto-inject ke buku kas (Hanya logic visual di preview)
+                if(IS_PREVIEW) {
+                    const tagihan = DB.iuran.find(x=>x.id === id);
+                    if(tagihan) apiCall('addTrx', { jenis: 'Pemasukan', kategori: 'Iuran Warga', ket: `Iuran ${tagihan.bulan} - ${tagihan.nama}`, masuk: tagihan.nominal, keluar: 0 });
+                }
+                showToast("Pembayaran berhasil dikonfirmasi", "success");
+                renderTableIuran();
+            } catch(e) { showToast(e.message, "error"); }
+        });
+    }
+
+    // --- FUNGSI MODAL QRIS ---
+    let qrisPendingBulan = '';
+    let qrisPendingNominal = 0;
+
+    function bukaModalQRIS(bulan, nominal) {
+        qrisPendingBulan = bulan;
+        qrisPendingNominal = nominal;
+        document.getElementById('qrisNominal').innerText = 'Rp ' + nominal.toLocaleString('id-ID');
+
+        const modal = document.getElementById('modalQRIS');
+        const box = document.getElementById('modalQRISBox');
+        modal.classList.remove('hidden-view');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            box.classList.remove('scale-95');
+        }, 10);
+    }
+
+    function tutupModalQRIS() {
+        const modal = document.getElementById('modalQRIS');
+        const box = document.getElementById('modalQRISBox');
+        modal.classList.add('opacity-0');
+        box.classList.add('scale-95');
+        setTimeout(() => modal.classList.add('hidden-view'), 300);
+    }
+
+    function konfirmasiWAQRIS() {
+        const msg = encodeURIComponent(`Halo Admin RT,\nSaya ingin konfirmasi pembayaran iuran via *QRIS*.\n\nNama: ${currentUser.nama}\nBulan Tagihan: ${qrisPendingBulan}\nNominal: Rp ${qrisPendingNominal.toLocaleString('id-ID')}\n\n*Berikut saya lampirkan bukti transfernya:* (Tolong kirimkan foto/screenshot bukti transfer di bawah ini ya)`);
+        const waLink = `https://wa.me/${WA_DARURAT}?text=${msg}`;
+        window.open(waLink, '_blank');
+        tutupModalQRIS();
+        showToast("Membuka WhatsApp untuk konfirmasi...", "info");
+    }
+
+    // --- PANIC BUTTON ---
+    function triggerPanic() {
+        if(!currentUser) return;
+        const msg = encodeURIComponent(`🚨 *DARURAT RT* 🚨\n\nBantuan segera dibutuhkan!\n\nNama: ${currentUser.nama}\nAkun: ${currentUser.username}\nLokasi: Rumah Warga Ybs\n\nMohon pengurus/keamanan segera mengecek lokasi.`);
+        const waLink = `https://wa.me/${WA_DARURAT}?text=${msg}`;
+        window.open(waLink, '_blank');
+        showToast("WhatsApp Darurat dibuka!", "info");
+    }
+
+</script>
+</body>
+</html>
